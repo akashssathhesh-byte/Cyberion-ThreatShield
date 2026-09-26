@@ -1,0 +1,25 @@
+app:
+  name: Cyberion Shield
+  log_level: INFO
+
+monitor:
+  monitor_path: ./lab
+  recursive: true
+  max_file_size_mb: 100
+  activity_window_seconds: 10
+  activity_threshold: 25
+
+detection:
+  suspicious_extensions:
+    - .locked
+    - .encrypted
+    - .crypt
+    - .enc
+    - .suspicious
+  high_activity_severity: HIGH
+  suspicious_extension_severity: HIGH
+  large_file_severity: MEDIUM
+
+storage:
+  database: cyberion_shield.db
+  event_log: logs/security_events.jsonl
