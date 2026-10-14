@@ -1,0 +1,84 @@
+import hashlib
+import time
+from collections import deque
+from pathlib import Path
+
+from .config import load_config
+from .models import Alert, utc_now
+
+class DetectionEngine:
+    def __init__(self, alert_callback):
+        self.cfg = load_config()
+        self.callback = alert_callback
+        self.activity = deque()
+
+    def hash_file(self, path: Path):
+        digest = hashlib.sha256()
+        try:
+            with path.open("rb") as f:
+                for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            return digest.hexdigest()
+        except (OSError, PermissionError):
+            return None
+
+    def emit(self, severity, rule, path, sha256, message):
+        alert = Alert(
+            severity=severity,
+            rule=rule,
+            path=str(path),
+            sha256=sha256,
+            message=message,
+            timestamp=utc_now(),
+        )
+        self.callback(alert)
+
+    def process(self, path):
+        path = Path(path)
+        if not path.is_file():
+            return
+
+        now = time.monotonic()
+        window = self.cfg["monitor"]["activity_window_seconds"]
+        threshold = self.cfg["monitor"]["activity_threshold"]
+
+        self.activity.append(now)
+        while self.activity and now - self.activity[0] > window:
+            self.activity.popleft()
+
+        sha256 = self.hash_file(path)
+        ext = path.suffix.lower()
+        suspicious = set(self.cfg["detection"]["suspicious_extensions"])
+
+        if ext in suspicious:
+            self.emit(
+                self.cfg["detection"]["suspicious_extension_severity"],
+                "SUSPICIOUS_EXTENSION",
+                path,
+                sha256,
+                "A configured suspicious file extension was observed."
+            )
+
+        try:
+            size_mb = path.stat().st_size / (1024 * 1024)
+            max_size = self.cfg["monitor"]["max_file_size_mb"]
+            if size_mb >= max_size:
+                self.emit(
+                    self.cfg["detection"]["large_file_severity"],
+                    "LARGE_FILE_CHANGE",
+                    path,
+                    sha256,
+                    f"Observed file size {size_mb:.2f} MB exceeds the configured threshold."
+                )
+        except OSError:
+            pass
+
+        if len(self.activity) >= threshold:
+            self.emit(
+                self.cfg["detection"]["high_activity_severity"],
+                "HIGH_FILE_ACTIVITY",
+                path,
+                sha256,
+                f"Observed {len(self.activity)} file events within {window} seconds."
+            )
+            self.activity.clear()
