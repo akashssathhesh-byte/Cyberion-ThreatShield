@@ -1,0 +1,19 @@
+import json
+import logging
+from pathlib import Path
+from .config import BASE_DIR, load_config
+
+cfg = load_config()
+LOG_PATH = BASE_DIR / cfg["storage"]["event_log"]
+
+def setup_logging():
+    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(
+        level=getattr(logging, cfg["app"].get("log_level", "INFO")),
+        format="%(asctime)s | %(levelname)s | %(message)s"
+    )
+
+def write_event(event):
+    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with LOG_PATH.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(event, ensure_ascii=False) + "\n")
