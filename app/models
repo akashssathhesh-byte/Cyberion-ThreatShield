@@ -1,0 +1,18 @@
+from dataclasses import dataclass, asdict
+from datetime import datetime, timezone
+from typing import Optional
+
+@dataclass
+class Alert:
+    severity: str
+    rule: str
+    path: str
+    sha256: Optional[str]
+    message: str
+    timestamp: str
+
+    def to_dict(self):
+        return asdict(self)
+
+def utc_now():
+    return datetime.now(timezone.utc).isoformat()
