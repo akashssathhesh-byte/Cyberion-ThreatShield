@@ -1,0 +1,20 @@
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
+
+class EventHandler(FileSystemEventHandler):
+    def __init__(self, detector):
+        self.detector = detector
+
+    def on_created(self, event):
+        if not event.is_directory:
+            self.detector.process(event.src_path)
+
+    def on_modified(self, event):
+        if not event.is_directory:
+            self.detector.process(event.src_path)
+
+def start_watcher(path, detector, recursive=True):
+    observer = Observer()
+    observer.schedule(EventHandler(detector), path, recursive=recursive)
+    observer.start()
+    return observer
