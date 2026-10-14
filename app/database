@@ -1,0 +1,65 @@
+import sqlite3
+from pathlib import Path
+from .config import BASE_DIR, load_config
+
+cfg = load_config()
+DB_PATH = BASE_DIR / cfg["storage"]["database"]
+
+def init_db():
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS alerts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            severity TEXT NOT NULL,
+            rule TEXT NOT NULL,
+            path TEXT NOT NULL,
+            sha256 TEXT,
+            message TEXT NOT NULL
+        )
+        """)
+        conn.commit()
+
+def insert_alert(alert):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+        INSERT INTO alerts(timestamp, severity, rule, path, sha256, message)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            alert.timestamp, alert.severity, alert.rule,
+            alert.path, alert.sha256, alert.message
+        ))
+        conn.commit()
+
+def recent_alerts(limit=50):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("""
+            SELECT * FROM alerts
+            ORDER BY id DESC LIMIT ?
+        """, (limit,)).fetchall()
+        return [dict(row) for row in rows]
+
+def stats():
+    with sqlite3.connect(DB_PATH) as conn:
+        total = conn.execute("SELECT COUNT(*) FROM alerts").fetchone()[0]
+        high = conn.execute(
+            "SELECT COUNT(*) FROM alerts WHERE severity='HIGH'"
+        ).fetchone()[0]
+        medium = conn.execute(
+            "SELECT COUNT(*) FROM alerts WHERE severity='MEDIUM'"
+        ).fetchone()[0]
+        low = conn.execute(
+            "SELECT COUNT(*) FROM alerts WHERE severity='LOW'"
+        ).fetchone()[0]
+        return {"total": total, "high": high, "medium": medium, "low": low}
+
+def find_hash(sha256):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT * FROM alerts WHERE sha256=? ORDER BY id DESC",
+            (sha256,)
+        ).fetchall()
+        return [dict(row) for row in rows]
