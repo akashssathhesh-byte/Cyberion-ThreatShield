@@ -68,3 +68,10 @@ def ioc_lookup(sha256: str):
     if len(sha256) != 64 or any(c not in "0123456789abcdefABCDEF" for c in sha256):
         raise HTTPException(status_code=400, detail="Invalid SHA-256 hash")
     return {"sha256": sha256, "observations": find_hash(sha256)}
+    from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def home():
+    return {"message": "Cyberion ThreatShield is running"}
