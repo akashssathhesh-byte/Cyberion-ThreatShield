@@ -69,9 +69,3 @@ def ioc_lookup(sha256: str):
         raise HTTPException(status_code=400, detail="Invalid SHA-256 hash")
     return {"sha256": sha256, "observations": find_hash(sha256)}
     from fastapi import FastAPI
-
-app = FastAPI()
-
-@app.get("/")
-def home():
-    return {"message": "Cyberion ThreatShield is running"}
