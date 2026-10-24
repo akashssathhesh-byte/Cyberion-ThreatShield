@@ -14,9 +14,13 @@ cfg = load_config()
 setup_logging()
 init_db()
 
-app = FastAPI(title="Cyberion Shield", version="1.0.0")
-_state_lock = Lock()
-_observer = None
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def home():
+    return {"message": "Cyberion ThreatShield is running"}
 
 def handle_alert(alert):
     data = alert.to_dict()
