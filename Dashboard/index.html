@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cyberion Shield</title>
+  <style>
+    body{font-family:Arial,sans-serif;margin:0;background:#0f172a;color:#e2e8f0}
+    header{padding:24px 7%;background:#111827}
+    main{padding:28px 7%}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px}
+    .card{background:#1e293b;border-radius:14px;padding:20px}
+    .value{font-size:30px;font-weight:700;margin-top:8px}
+    table{width:100%;border-collapse:collapse;margin-top:24px;background:#1e293b}
+    th,td{padding:12px;text-align:left;border-bottom:1px solid #334155}
+    .high{font-weight:700}
+    code{color:#93c5fd}
+  </style>
+</head>
+<body>
+<header>
+  <h1>🛡️ Cyberion Shield</h1>
+  <p>Endpoint threat-detection dashboard</p>
+</header>
+<main>
+  <div class="grid">
+    <div class="card">Total Alerts<div class="value" id="total">-</div></div>
+    <div class="card">High<div class="value" id="high">-</div></div>
+    <div class="card">Medium<div class="value" id="medium">-</div></div>
+    <div class="card">Low<div class="value" id="low">-</div></div>
+  </div>
+  <h2>Recent Alerts</h2>
+  <table>
+    <thead><tr><th>Time</th><th>Severity</th><th>Rule</th><th>Path</th><th>Message</th></tr></thead>
+    <tbody id="alerts"></tbody>
+  </table>
+</main>
+<script>
+async function refresh(){
+  const s = await fetch('/stats').then(r=>r.json());
+  for (const k of ['total','high','medium','low'])
+    document.getElementById(k).textContent = s[k];
+
+  const a = await fetch('/alerts?limit=50').then(r=>r.json());
+  document.getElementById('alerts').innerHTML = a.map(x => `
+    <tr>
+      <td>${x.timestamp}</td>
+      <td class="${x.severity.toLowerCase()}">${x.severity}</td>
+      <td><code>${x.rule}</code></td>
+      <td>${x.path}</td>
+      <td>${x.message}</td>
+    </tr>`).join('');
+}
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
